@@ -7,7 +7,7 @@ services:
     ports:
       - "8069:8069"
     environment:
-      - HOST=mydb
+      - HOST=odoo-db
       - USER=odoo
       - PASSWORD=myodoo
     volumes:
@@ -21,6 +21,7 @@ services:
       - POSTGRES_DB=postgres
       - POSTGRES_PASSWORD=myodoo
       - POSTGRES_USER=odoo
+      - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - odoo-db-data:/var/lib/postgresql/data/pgdata
 
