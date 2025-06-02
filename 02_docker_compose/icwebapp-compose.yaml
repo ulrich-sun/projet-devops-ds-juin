@@ -7,3 +7,11 @@ services:
     environment: 
       - "ODOO_URL="
       - "PGADMIN_URL="
+    networks:
+      - odoo-net
+      
+networks:
+  odoo-net:
+    driver: bridge 
+    external: true
+    name: odoo-net

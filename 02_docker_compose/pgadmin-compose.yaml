@@ -7,3 +7,11 @@ services:
     environment:
       - "PGADMIN_DEFAULT_EMAIL=datascientest@datascientest.io"
       - "PGADMIN_DEFAULT_PASSWORD=SuperSecret"
+    networks:
+      - odoo-net
+
+networks:
+  odoo-net:
+    driver: bridge 
+    external: true
+    name: odoo-net
