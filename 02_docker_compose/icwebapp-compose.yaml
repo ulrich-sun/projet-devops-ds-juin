@@ -1,0 +1,9 @@
+services:
+  icwebapp:
+    image: ic-webapp:1.0
+    container_name: test-ic-webapp
+    ports:
+      - "8080:8080"
+    environment: 
+      - "ODOO_URL="
+      - "PGADMIN_URL="
