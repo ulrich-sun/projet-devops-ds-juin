@@ -1,0 +1,33 @@
+---
+# tasks file for docker
+- name: update os ubuntu
+  apt:
+    update_cache: yes
+    #upgrade: dist
+
+- name: download docker script 
+  get_url:
+    url: https://get.docker.com
+    dest: /tmp/install-docker.sh
+    mode: '0755'
+
+- name: install docker 
+  command: /tmp/install-docker.sh
+  become: true
+  args:
+    warn: false
+
+- name: start docker service
+  service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: add user to docker group
+  user:
+    name: "{{ ansible_user }}"
+    group: docker
+    append: true
+  become: true
+  when: ansible_user != 'root'
+  notify: restart docker service
