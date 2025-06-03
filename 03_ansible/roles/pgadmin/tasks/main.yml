@@ -1,2 +1,17 @@
 ---
 # tasks file for pgadmin
+- name: generate pgadmin compose file
+  template:
+    src: pgadmin-compose.yml.j2
+    dest: /home/{{ ansible_user }}/pgadmin-compose.yml
+  become: true
+
+- name: start compose file 
+  command: docker compose -f /home/{{ ansible_user }}/pgadmin-compose.yml up -d
+  become: true
+  tags: start
+
+- name: stop compose file 
+  command: docker compose -f /home/{{ ansible_user }}/pgadmin-compose.yml down -v
+  become: true
+  tags: stop

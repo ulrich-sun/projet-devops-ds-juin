@@ -1,0 +1,17 @@
+services:
+  {{ pgadmin_service_name }}:
+    image: {{ pgadmin_image }}
+    container_name: {{ pgadmin_service_name }}
+    ports:
+      - "{{ pgadmin_srv_port }}:80"
+    environment:
+      - "PGADMIN_DEFAULT_EMAIL={{ pgadmin_default_email }}"
+      - "PGADMIN_DEFAULT_PASSWORD={{ pgadmin_default_password }}"
+    networks:
+      - {{ pgadmin_network }}
+
+networks:
+  {{ pgadmin_network }}:
+    driver: bridge 
+    external: true
+    name:{{ pgadmin_network }} 

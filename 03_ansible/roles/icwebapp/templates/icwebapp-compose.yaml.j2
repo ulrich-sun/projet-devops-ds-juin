@@ -1,0 +1,17 @@
+services:
+  {{ icwebapp_service_name }}:
+    image: {{ icwebapp_image_name }}:{{ icwebapp_image_version }}
+    container_name: {{ icwebapp_service_name }}
+    ports:
+      - "{{ host_port_icwebapp }}:8080"
+    environment: 
+      - "ODOO_URL={{ odoo_url }}"
+      - "PGADMIN_URL={{ pgadmin_url }}"
+    networks:
+      - {{ icwebapp_network_name }}:
+      
+networks:
+  {{ icwebapp_network_name }}:
+    driver: bridge 
+    external: true
+    name: {{ icwebapp_network_name }}:

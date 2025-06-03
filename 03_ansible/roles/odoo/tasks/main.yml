@@ -1,2 +1,17 @@
 ---
 # tasks file for odoo
+- name: generate odoo compose file
+  template:
+    src: odoo-compose.yml.j2
+    dest: /home/{{ ansible_user }}/odoo-compose.yml
+  become: true
+
+- name: start compose file 
+  command: docker compose -f /home/{{ ansible_user }}/odoo-compose.yml up -d
+  become: true
+  tags: start
+
+- name: stop compose file 
+  command: docker compose -f /home/{{ ansible_user }}/odoo-compose.yml down -v
+  become: true
+  tags: stop
