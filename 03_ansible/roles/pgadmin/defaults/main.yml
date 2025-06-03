@@ -5,4 +5,4 @@ pgadmin_image: dpage/pgadmin4:latest
 pgadmin_srv_port: 5050
 pgadmin_default_email: toto@toto.com 
 pgadmin_default_password: SuperSecret
-pgadmin_network: 
+pgadmin_network: "{{ docker_network_name }}"

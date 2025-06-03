@@ -14,8 +14,8 @@
 - name: install docker 
   command: /tmp/install-docker.sh
   become: true
-  args:
-    warn: false
+  # args:
+  #   warn: false
 
 - name: start docker service
   service:

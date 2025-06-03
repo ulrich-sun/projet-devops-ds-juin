@@ -5,4 +5,4 @@ all:
       hosts:
         machine-1:
         machine-2:
-          
+

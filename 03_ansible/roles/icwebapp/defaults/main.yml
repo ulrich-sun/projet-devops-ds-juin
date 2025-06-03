@@ -1,9 +1,9 @@
 ---
 # defaults file for icwebapp
 icwebapp_service_name: icwebapp
-icwebapp_image_name: ic-webapp
+icwebapp_image_name: ulrichsteve/ic-webapp
 icwebapp_image_version: 1.0
-icwebapp_network_name: odoo-net
+icwebapp_network_name: "{{ docker_network_name }}"
 host_port_icwebapp: 8080
 odoo_url: ""
 pgadmin_url: ""

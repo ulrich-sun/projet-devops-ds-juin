@@ -8,4 +8,4 @@ odoo_db_image: postgres:15
 odoo_db_srv_port: 5432
 odoo_db_user: odoo
 odoo_db_password: myodoo
-odoo_network:
+odoo_network: "{{ docker_network_name }}"

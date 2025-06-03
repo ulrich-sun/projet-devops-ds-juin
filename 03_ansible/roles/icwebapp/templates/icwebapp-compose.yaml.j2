@@ -8,10 +8,10 @@ services:
       - "ODOO_URL={{ odoo_url }}"
       - "PGADMIN_URL={{ pgadmin_url }}"
     networks:
-      - {{ icwebapp_network_name }}:
+      - {{ icwebapp_network_name }}
       
 networks:
   {{ icwebapp_network_name }}:
     driver: bridge 
     external: true
-    name: {{ icwebapp_network_name }}:
+    name: {{ icwebapp_network_name }}
