@@ -1,0 +1,4 @@
+ansible_user: ubuntu 
+ansible_password: datascientest 
+ansible_port: 22 
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
