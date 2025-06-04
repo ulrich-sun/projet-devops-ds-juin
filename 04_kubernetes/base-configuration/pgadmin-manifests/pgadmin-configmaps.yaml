@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgadmin-config
+  namespace: icgroup
+data:
+  PGADMIN_DEFAULT_EMAIL: "admin@icgroup.com"
+  servers.json: |
+    {
+      "Servers": {
+        "1": {
+          "Name": "Postgres",
+          "Group": "Servers",
+          "Host": "postgres",
+          "Port": 5432,
+          "Username": "odoo",
+          "SSLMode": "prefer"
+        }
+      }
+    }

@@ -1,0 +1,41 @@
+# Odoo Docker Compose Configuration
+services:
+  odoo:
+    image: {{ odoo_image | default('odoo:17.0') }}
+    container_name: {{ odoo_container_name | default('odoo-app') }}
+    depends_on:
+      - db
+    ports:
+      - "{{ odoo_port | default('8069') }}:8069"
+    environment:
+      - HOST={{ odoo_db_host | default('db') }}
+      - USER={{ odoo_db_user | default('odoo') }}
+      - PASSWORD={{ odoo_db_password | default('odoo') }}
+    volumes:
+      - {{ odoo_data_path | default('odoo-data') }}:/var/lib/odoo
+    networks:
+      - {{ docker_network_name | default('icgroup-net') }}
+
+  db:
+    image: {{ odoo_db_image | default('postgres:15') }}
+    container_name: {{ odoo_db_container_name | default('odoo-db') }}
+    environment:
+      - POSTGRES_DB={{ odoo_db_name | default('postgres') }}
+      - POSTGRES_USER={{ odoo_db_user | default('odoo') }}
+      - POSTGRES_PASSWORD={{ odoo_db_password | default('odoo') }}
+    volumes:
+      - {{ odoo_db_data_path | default('odoo-db-data') }}:/var/lib/postgresql/data
+    networks:
+      - {{ docker_network_name | default('icgroup-net') }}
+
+volumes:
+  odoo-data:
+    name: {{ odoo_volume_name | default('odoo-data') }}
+  odoo-db-data:
+    name: {{ odoo_db_volume_name | default('odoo-db-data') }}
+
+networks:
+  icgroup-net:
+    name: {{ docker_network_name | default('icgroup-net') }}
+    driver: bridge 
+    external: true

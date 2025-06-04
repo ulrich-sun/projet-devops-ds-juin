@@ -1,0 +1,7 @@
+resources:
+  - pgadmin-configmaps.yaml
+  - pgadmin-configmap-server.yaml
+  - pgadmin-secrets.yaml
+  - pgadmin-pvc.yaml
+  - pgadmin-deployment.yaml
+  - pgadmin-service.yaml

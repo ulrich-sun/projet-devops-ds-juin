@@ -1,0 +1,5 @@
+apiVersion: v2
+name: icgroup
+description: "Déploiement Odoo, Postgres, PgAdmin, icwebapp"
+type: application
+version: 0.1.0

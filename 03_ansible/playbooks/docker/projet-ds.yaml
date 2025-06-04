@@ -1,0 +1,44 @@
+---
+- name: Déploiement complet de la stack ICGroup (Odoo, PgAdmin, icwebapp)
+  hosts: all
+  become: true
+
+  pre_tasks:
+    - name: Vérifier si Docker est installé
+      ansible.builtin.shell: "docker --version"
+      register: docker_check
+      ignore_errors: true
+
+    - name: Définir le flag docker_present
+      set_fact:
+        docker_present: "{{ docker_check.rc == 0 }}"
+
+  roles:
+    - role: docker
+      when: not docker_present
+
+  tasks:
+    - name: Rafraîchir la détection de Docker si installé à l'étape précédente
+      ansible.builtin.shell: "docker --version"
+      register: docker_check_post
+      changed_when: false
+      ignore_errors: true
+
+    - name: Définir le flag docker_present_post
+      set_fact:
+        docker_present_post: "{{ docker_check_post.rc == 0 }}"
+
+    - name: Créer le réseau Docker s'il n'existe pas
+      community.docker.docker_network:
+        name: "{{ docker_network_name | default('icgroup-net') }}"
+        driver: bridge
+        state: present
+      when: docker_present_post
+
+  roles:
+    - role: odoo_role
+      when: docker_present_post
+    - role: pgadmin_role
+      when: docker_present_post
+    - role: icwebapp_role
+      when: docker_present_post

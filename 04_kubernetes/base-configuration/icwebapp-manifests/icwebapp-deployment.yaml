@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: icwebapp
+  namespace: icgroup
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: icwebapp
+  template:
+    metadata:
+      labels:
+        app: icwebapp
+    spec:
+      containers:
+        - name: icwebapp
+          image: ulrichsteve/ic-webapp:1.0
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: icwebapp-config
+            - secretRef:
+                name: icwebapp-secret
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

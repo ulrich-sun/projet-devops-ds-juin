@@ -1,8 +1,12 @@
----
-# defaults file for pgadmin
-pgadmin_service_name: pgadmin
-pgadmin_image: dpage/pgadmin4:latest
-pgadmin_srv_port: 5050
-pgadmin_default_email: toto@toto.com 
-pgadmin_default_password: SuperSecret
-pgadmin_network: "{{ docker_network_name }}"
+# Variables pour le rôle PgAdmin
+pgadmin_image: "dpage/pgadmin4:latest"
+pgadmin_container_name: "pgadmin-app"
+pgadmin_port: "5050"
+pgadmin_default_email: "admin@icgroup.com"
+pgadmin_default_password: "admin"
+
+pgadmin_data_path: "pgadmin-data"
+pgadmin_volume_name: "pgadmin-data"
+pgadmin_servers_json_path: "./servers.json"
+
+docker_network_name: "icgroup-net"

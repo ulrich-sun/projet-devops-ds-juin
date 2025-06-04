@@ -1,0 +1,14 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "OdooDB",
+            "Group": "Odoo",
+            "Host": "odoo-db",          // nom du service/postgres dans docker-compose
+            "Port": 5432,
+            "MaintenanceDB": "postgres",
+            "Username": "odoo",
+            "SSLMode": "prefer",
+            "Comment": "Connexion auto à la base PostgreSQL Odoo"
+        }
+    }
+}

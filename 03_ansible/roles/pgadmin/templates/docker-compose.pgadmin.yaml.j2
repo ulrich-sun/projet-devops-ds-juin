@@ -1,0 +1,25 @@
+#pgadmin Docker Compose file
+services:
+  pgadmin:
+    image: {{ pgadmin_image | default('dpage/pgadmin4:latest') }}
+    container_name: {{ pgadmin_container_name | default('pgadmin-app') }}
+    ports:
+      - "{{ pgadmin_port | default('5050') }}:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL={{ pgadmin_default_email | default('admin@icgroup.com') }}
+      - PGADMIN_DEFAULT_PASSWORD={{ pgadmin_default_password | default('admin') }}
+    volumes:
+      - {{ pgadmin_data_path | default('pgadmin-data') }}:/var/lib/pgadmin
+      - {{ pgadmin_servers_json_path | default('./servers.json') }}:/pgadmin4/servers.json
+    networks:
+      - {{ docker_network_name | default('icgroup-net') }}
+
+volumes:
+  pgadmin-data:
+    name: {{ pgadmin_volume_name | default('pgadmin-data') }}
+
+networks:
+  icgroup-net:
+    name: {{ docker_network_name | default('icgroup-net') }}
+    driver: bridge 
+    external: true

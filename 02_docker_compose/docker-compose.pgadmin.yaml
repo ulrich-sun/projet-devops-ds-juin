@@ -1,0 +1,25 @@
+# pgAdmin Docker Compose file
+services:
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ${PGADMIN_CONTAINER_NAME:-pgadmin-app}
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-admin@icgroup.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:-admin}
+    volumes:
+      - ${PGADMIN_DATA_PATH:-pgadmin-data}:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json # fichier customisé pour connexion auto
+    networks:
+      - ${DOCKER_NETWORK_NAME:-icgroup-net}
+
+volumes:
+  pgadmin-data:
+    name: ${PGADMIN_VOLUME_NAME:-pgadmin-data}
+
+networks:
+  icgroup-net:
+    name: ${DOCKER_NETWORK_NAME:-icgroup-net}
+    driver: bridge 
+    external: true

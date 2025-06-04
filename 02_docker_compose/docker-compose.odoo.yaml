@@ -1,0 +1,42 @@
+# Odoo Docker Compose Configuration
+# This file defines the Odoo application and its PostgreSQL database using Docker Compose.
+services:
+  odoo:
+    image: odoo:17.0
+    container_name: ${ODOO_CONTAINER_NAME:-odoo-app}
+    depends_on:
+      - db
+    ports:
+      - "8069:8069"
+    environment:
+      - HOST=db
+      - USER=odoo
+      - PASSWORD=${ODOO_DB_PASSWORD:-odoo}
+    volumes:
+      - ${ODOO_DATA_PATH:-odoo-data}:/var/lib/odoo
+    networks:
+      - ${DOCKER_NETWORK_NAME:-icgroup-net}
+
+  db:
+    image: postgres:15
+    container_name: ${ODOO_DB_CONTAINER_NAME:-odoo-db}
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=${ODOO_DB_PASSWORD:-odoo}
+    volumes:
+      - ${ODOO_DB_DATA_PATH:-odoo-db-data}:/var/lib/postgresql/data
+    networks:
+      - ${DOCKER_NETWORK_NAME:-icgroup-net}
+
+volumes:
+  odoo-data:
+    name: ${ODOO_VOLUME_NAME:-odoo-data}
+  odoo-db-data:
+    name: ${ODOO_DB_VOLUME_NAME:-odoo-db-data}
+
+networks:
+  icgroup-net:
+    name: ${DOCKER_NETWORK_NAME:-icgroup-net}
+    driver: bridge 
+    external: true

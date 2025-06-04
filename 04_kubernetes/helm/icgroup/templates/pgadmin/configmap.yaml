@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgadmin-config
+  namespace: {{ .Values.namespace }}
+data:
+  PGADMIN_DEFAULT_EMAIL: {{ .Values.pgadmin.email | quote }}

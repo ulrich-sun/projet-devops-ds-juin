@@ -1,9 +1,10 @@
----
-# defaults file for icwebapp
-icwebapp_service_name: icwebapp
-icwebapp_image_name: ulrichsteve/ic-webapp
-icwebapp_image_version: 1.0
-icwebapp_network_name: "{{ docker_network_name }}"
-host_port_icwebapp: 8080
-odoo_url: ""
-pgadmin_url: ""
+# Variables pour le rôle icwebapp
+icwebapp_image: "ulrichsteve/ic-webapp"
+icwebapp_version: "1.0"
+icwebapp_container_name: "test-ic-webapp"
+icwebapp_port: "8080"
+
+odoo_url: "https://www.odoo.com/"
+pgadmin_url: "https://www.pgadmin.org/"
+
+docker_network_name: "icgroup-net"

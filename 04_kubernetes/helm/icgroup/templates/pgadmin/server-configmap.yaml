@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgadmin-servers
+  namespace: {{ .Values.namespace }}
+data:
+  servers.json: |-
+{{ .Values.pgadmin.serversJson | indent 4 }}

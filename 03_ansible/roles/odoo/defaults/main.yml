@@ -1,11 +1,19 @@
----
-# defaults file for odoo
-odoo_service_name: odoo
-odoo_image: odoo:17.0
-odoo_srv_port: 8069
-odoo_db_service_name: odoo-db
-odoo_db_image: postgres:15
-odoo_db_srv_port: 5432
-odoo_db_user: odoo
-odoo_db_password: myodoo
-odoo_network: "{{ docker_network_name }}"
+# Variables pour le rôle Odoo
+odoo_image: "odoo:17.0"
+odoo_container_name: "odoo-app"
+odoo_port: "8069"
+
+odoo_db_host: "db"
+odoo_db_user: "odoo"
+odoo_db_password: "odoo"
+odoo_db_name: "postgres"
+
+odoo_data_path: "odoo-data"
+odoo_volume_name: "odoo-data"
+
+odoo_db_image: "postgres:15"
+odoo_db_container_name: "odoo-db"
+odoo_db_data_path: "odoo-db-data"
+odoo_db_volume_name: "odoo-db-data"
+
+docker_network_name: "icgroup-net"

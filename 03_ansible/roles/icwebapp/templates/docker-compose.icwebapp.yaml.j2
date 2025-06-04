@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  icwebapp:
+    image: {{ icwebapp_image | default('ic-webapp') }}:{{ icwebapp_version | default('1.0') }}
+    container_name: {{ icwebapp_container_name | default('test-ic-webapp') }}
+    ports:
+      - "{{ icwebapp_port | default('8080') }}:8080"
+    environment:
+      - ODOO_URL={{ odoo_url | default('https://www.odoo.com/') }}
+      - PGADMIN_URL={{ pgadmin_url | default('https://www.pgadmin.org/') }}
+    networks:
+      - {{ docker_network_name | default('icgroup-net') }}
+
+networks:
+  icgroup-net:
+    driver: bridge
+    external: true
+    name: {{ docker_network_name | default('icgroup-net') }}

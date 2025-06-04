@@ -1,0 +1,197 @@
+# ---------- ANCRES ----------
+.default-docker: &default-docker
+  image: docker:latest
+  services:
+    - name: docker:dind
+      alias: docker
+
+.terraform-aws: &terraform-aws
+  image:
+    name: hashicorp/terraform
+    entrypoint: [""]
+  before_script:
+    - mkdir -p ~/.aws
+    - echo "[default]" > ~/.aws/credentials
+    - echo "aws_access_key_id=$AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+    - echo "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+    - chmod 400 ~/.aws/credentials
+
+.ansible: &ansible
+  image: registry.gitlab.com/robconnolly/docker-ansible:latest
+
+.kubectl: &kubectl
+  image: bitnami/kubectl
+
+.variables: &variables
+  variables:
+    DOCKERFILE_NAME: "Dockerfile"
+    DOCKER_DIR: "./01_docker"
+    IMAGE_NAME: "ic-webapp-2"
+    IMAGE_TAG: "1.0"
+    CONT_PORT: "8080"
+    HOST_IP: "172.17.0.1"
+
+# ---------- PIPELINE ----------
+stages:
+  - build
+  - test
+  - push
+  - infra-docker
+  - deploy-docker
+  - destroy-docker
+  - infra-k3s
+  - kubeconfig
+  - deploy-k3s
+  - destroy-k3s
+
+<<: *variables
+
+# ---------- BUILD IMAGE ----------
+build_image:
+  <<: *default-docker
+  stage: build
+  script:
+    - docker build --no-cache -t "$DOCKERHUB_ID/$IMAGE_NAME:$IMAGE_TAG" -f "$DOCKER_DIR/$DOCKERFILE_NAME" "$DOCKER_DIR/."
+    - docker save -o image.tar "$DOCKERHUB_ID/$IMAGE_NAME:$IMAGE_TAG"
+  artifacts:
+    paths:
+      - image.tar
+    expire_in: 1 hour
+  only:
+    - main
+
+# ---------- TEST IMAGE ----------
+run_and_test:
+  <<: *default-docker
+  stage: test
+  dependencies:
+    - build_image
+  script:
+    - apk add --no-cache curl
+    - docker load -i image.tar
+    - docker rm -f "$IMAGE_NAME" || true
+    - docker run --name "$IMAGE_NAME" -dp $HOST_PORT:$CONT_PORT "$DOCKERHUB_ID/$IMAGE_NAME:$IMAGE_TAG"
+    - sleep 5
+    - curl -I http://docker:$HOST_PORT | grep -i "200"
+  after_script:
+    - docker rm -f "$IMAGE_NAME" || true
+  only:
+    - main
+
+# ---------- PUSH IMAGE ----------
+push_image:
+  <<: *default-docker
+  stage: push
+  dependencies:
+    - build_image
+  script:
+    - docker load -i image.tar
+    - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_ID" --password-stdin
+    - docker push "$DOCKERHUB_ID/$IMAGE_NAME:$IMAGE_TAG"
+  only:
+    - main
+
+# ---------- INFRA DOCKER (TERRAFORM) ----------
+create_docker_instance:
+  <<: *terraform-aws
+  stage: infra-docker
+  script:
+    - cd 05_terraform/
+    - terraform init
+    - terraform destroy -var="ds_script=docker" -auto-approve || true
+    - terraform apply -var="ds_script=docker" -auto-approve
+    - cd ..
+  artifacts:
+    paths:
+      - 03_ansible/host_vars/dev-1.yaml
+      - 05_terraform/keypair/ds_keypair.pem
+    expire_in: 1 hour
+  only:
+    - main
+
+# ---------- DEPLOY APP ON DOCKER INSTANCE ----------
+deploy_app_on_docker_instance:
+  <<: *ansible
+  stage: deploy-docker
+  dependencies:
+    - create_docker_instance
+  script:
+    - chmod 600 05_terraform/keypair/ds_keypair.pem
+    - cd 03_ansible/
+    - export ANSIBLE_CONFIG=ansible.cfg
+    - ansible-playbook playbooks/docker/learn.yaml -i inventaire.yaml --private-key ../05_terraform/keypair/ds_keypair.pem --skip-tags delete
+  only:
+    - main
+
+# ---------- MANUAL: DESTROY DOCKER INSTANCE ----------
+destroy_docker_instance:
+  <<: *terraform-aws
+  stage: destroy-docker
+  script:
+    - cd 05_terraform/
+    - terraform init
+    - terraform destroy -var="ds_script=docker" -auto-approve
+  when: manual
+  only:
+    - main
+
+# ---------- INFRA K3S (TERRAFORM) ----------
+create_k3s_instance:
+  <<: *terraform-aws
+  stage: infra-k3s
+  script:
+    - cd 05_terraform/
+    - terraform init
+    - terraform apply -var="ds_script=k3s" -auto-approve
+    - cd ..
+  artifacts:
+    paths:
+      - 03_ansible/host_vars/dev-1.yaml
+      - 05_terraform/keypair/ds_keypair.pem
+    expire_in: 1 hour
+  only:
+    - main
+
+# ---------- KUBECONFIG (RETRIEVE CONFIG) ----------
+get_kubeconfig:
+  <<: *ansible
+  stage: kubeconfig
+  dependencies:
+    - create_k3s_instance
+  script:
+    - chmod 600 05_terraform/keypair/ds_keypair.pem
+    - cd 03_ansible/
+    - export ANSIBLE_CONFIG=ansible.cfg
+    - ansible-playbook playbooks/k3s/kubeconfig.yaml -i inventaire.yaml --private-key ../05_terraform/keypair/ds_keypair.pem
+  artifacts:
+    paths:
+      - 03_ansible/playbooks/k3s/k3s.yaml
+    expire_in: 1 hour
+  only:
+    - main
+
+# ---------- DEPLOY APP ON K3S INSTANCE ----------
+deploy_app_on_k3s_instance:
+  <<: *kubectl
+  stage: deploy-k3s
+  dependencies:
+    - get_kubeconfig
+  script:
+    - host_ip=$(grep 'ansible_host:' 03_ansible/host_vars/dev-1.yaml | awk '{print $2}')
+    - sed -i "s|host_ip|$host_ip|g" 04_kubernetes/ic-webapp/ic-webapp-cm.yaml
+    - cd 04_kubernetes/
+    - kubectl --kubeconfig=../03_ansible/playbooks/k3s/k3s.yaml apply -k .
+  only:
+    - main
+
+# ---------- MANUAL: DESTROY K3S INSTANCE ----------
+destroy_k3s_instance:
+  <<: *terraform-aws
+  stage: destroy-k3s
+  script:
+    - cd 05_terraform/
+    - terraform init
+    - terraform destroy -var="ds_script=k3s" -auto-approve
+  when: manual
+  only:
+    - main

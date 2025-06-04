@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: icwebapp-config
+  namespace: {{ .Values.namespace }}
+data:
+  ODOO_URL: {{ .Values.icwebapp.odooUrl | quote }}
+  PGADMIN_URL: {{ .Values.icwebapp.pgadminUrl | quote }}

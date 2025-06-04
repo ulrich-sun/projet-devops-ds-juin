@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  icwebapp:
+    image: ic-webapp:${VERSION:-1.0}
+    container_name: ${ICWEBAPP_CONTAINER_NAME:-test-ic-webapp}
+    ports:
+      - "${ICWEBAPP_PORT:-8080}:8080"
+    environment:
+      - ODOO_URL=${ODOO_URL}
+      - PGADMIN_URL=${PGADMIN_URL}
+    networks:
+      - ${DOCKER_NETWORK_NAME:-icgroup-net}
+
+networks:
+  odoo-net:
+    driver: bridge
+    external: true
+    name: ${DOCKER_NETWORK_NAME:-icgroup-net}

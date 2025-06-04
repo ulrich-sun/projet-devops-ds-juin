@@ -1,0 +1,6 @@
+resources:
+  - requirements/kustomization.yaml
+  - postgres-manifest/kustomization.yaml
+  - odoo-manifests/kustomization.yaml
+  - pgadmin-manifests/kustomization.yaml
+  - icwebapp-manifests/kustomization.yaml

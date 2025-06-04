@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: icwebapp
+  namespace: {{ .Values.namespace }}
+spec:
+  type: NodePort
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30808
+  selector:
+    {{ include "icgroup.selectorLabels" "icwebapp" | nindent 4 }}

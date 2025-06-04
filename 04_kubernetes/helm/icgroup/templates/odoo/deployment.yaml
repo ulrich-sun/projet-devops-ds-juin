@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{ include "icgroup.labels" "odoo" | nindent 4 }}
+spec:
+  replicas: {{ .Values.odoo.replicas }}
+  selector:
+    matchLabels:
+      {{ include "icgroup.selectorLabels" "odoo" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "icgroup.labels" "odoo" | nindent 8 }}
+    spec:
+      containers:
+        - name: odoo
+          image: {{ .Values.odoo.image }}
+          ports:
+            - containerPort: 8069
+          env:
+            - name: HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: odoo-config
+                  key: HOST
+            - name: USER
+              valueFrom:
+                configMapKeyRef:
+                  name: odoo-config
+                  key: USER
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: odoo-secret
+                  key: PASSWORD
+          resources:
+            requests:
+              cpu: {{ .Values.odoo.cpuRequest | quote }}
+              memory: {{ .Values.odoo.memRequest | quote }}
+            limits:
+              cpu: {{ .Values.odoo.cpuLimit | quote }}
+              memory: {{ .Values.odoo.memLimit | quote }}
+          volumeMounts:
+            - name: odoo-data
+              mountPath: /var/lib/odoo
+      volumes:
+        - name: odoo-data
+          persistentVolumeClaim:
+            claimName: odoo-data-pvc

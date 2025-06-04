@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo
+  namespace: icgroup
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odoo
+  template:
+    metadata:
+      labels:
+        app: odoo
+    spec:
+      containers:
+        - name: odoo
+          image: odoo:17.0
+          ports:
+            - containerPort: 8069
+          envFrom:
+            - configMapRef:
+                name: odoo-config
+            - secretRef:
+                name: odoo-secret
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          volumeMounts:
+            - name: odoo-data
+              mountPath: /var/lib/odoo
+      volumes:
+        - name: odoo-data
+          persistentVolumeClaim:
+            claimName: odoo-data-pvc

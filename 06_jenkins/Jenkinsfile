@@ -1,0 +1,181 @@
+pipeline {
+    agent any
+    environment {
+        DOCKERFILE_NAME = "Dockerfile"
+        DOCKER_DIR = "./01_docker"
+        IMAGE_NAME = "ic-webapp"
+        IMAGE_TAG = "1.0"
+        HOST_PORT = "8080"
+        CONT_PORT = "8080"
+        HOST_IP = "172.17.0.1"
+    }
+    stages {
+        stage("Build Image") {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub_id', usernameVariable: 'DOCKERHUB_ID', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
+                    sh """
+                        docker build --no-cache \
+                            -t \$DOCKERHUB_ID/\$IMAGE_NAME:\$IMAGE_TAG \
+                            -f \$DOCKER_DIR/\$DOCKERFILE_NAME \$DOCKER_DIR/.
+                    """
+                }
+            }
+        }
+        stage("Run and Test") {
+            steps {
+                sh """
+                    docker ps -a | grep -i \$IMAGE_NAME && docker rm -f \$IMAGE_NAME || true
+                    docker run --name \$IMAGE_NAME -dp \$HOST_PORT:\$CONT_PORT \$DOCKERHUB_ID/\$IMAGE_NAME:\$IMAGE_TAG
+                    sleep 5
+                    curl -I http://\$HOST_IP:\$HOST_PORT | grep -i "200"
+                """
+            }
+        }
+        stage("Push Image") {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub_id', usernameVariable: 'DOCKERHUB_ID', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
+                    sh """
+                        echo \$DOCKERHUB_PASSWORD | docker login -u \$DOCKERHUB_ID --password-stdin
+                        docker push \$DOCKERHUB_ID/\$IMAGE_NAME:\$IMAGE_TAG
+                    """
+                }
+            }
+        }
+        stage("Create Docker Instance") {
+            agent { docker { image 'jenkins/jnlp-agent-terraform' } }
+            environment {
+                AWS_ACCESS_KEY_ID = credentials('aws_access_key_id')
+                AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key')
+            }
+            steps {
+                sh '''
+                    mkdir -p ~/.aws
+                    echo "[default]" > ~/.aws/credentials
+                    echo -e "aws_access_key_id=$AWS_ACCESS_KEY_ID" >>  ~/.aws/credentials
+                    echo -e "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >>  ~/.aws/credentials
+                    chmod 400 ~/.aws/credentials
+                    cd 05_terraform/
+                    terraform init
+                    terraform apply -var="ds_script=docker" -auto-approve
+                '''
+                // Archive la clé générée par Terraform (ex: ds_keypair.pem)
+                archiveArtifacts artifacts: '05_terraform/keypair/ds_keypair.pem', onlyIfSuccessful: true
+                stash includes: '05_terraform/keypair/ds_keypair.pem', name: 'terraform-key'
+            }
+        }
+        stage("Deploy App on Docker Instance") {
+            agent { docker { image 'registry.gitlab.com/robconnolly/docker-ansible:latest' } }
+            steps {
+                unstash 'terraform-key'
+                sh '''
+                    cd 03_ansible/
+                    ansible-playbook playbooks/docker/projet-ds.yaml --private-key ../05_terraform/keypair/ds_keypair.pem
+                '''
+            }
+        }
+        stage('Destroy Docker Instance on aws') {
+            steps {
+                input message: "Voulez-vous détruire l'instance Docker?", ok: 'Yes'
+            }
+        }
+        stage("Destroy Docker Instance") {
+            agent { docker { image 'jenkins/jnlp-agent-terraform' } }
+            environment {
+                AWS_ACCESS_KEY_ID = credentials('aws_access_key_id')
+                AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key')
+            }
+            steps {
+                sh '''
+                    mkdir -p ~/.aws
+                    echo "[default]" > ~/.aws/credentials
+                    echo -e "aws_access_key_id=$AWS_ACCESS_KEY_ID" >>  ~/.aws/credentials
+                    echo -e "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >>  ~/.aws/credentials
+                    chmod 400 ~/.aws/credentials
+                    cd 05_terraform/
+                    terraform init
+                    terraform destroy -var="ds_script=docker" -auto-approve
+                '''
+            }
+        }
+        stage("Create K3S Instance") {
+            agent { docker { image 'jenkins/jnlp-agent-terraform' } }
+            environment {
+                AWS_ACCESS_KEY_ID = credentials('aws_access_key_id')
+                AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key')
+            }
+            steps {
+                sh '''
+                    mkdir -p ~/.aws
+                    echo "[default]" > ~/.aws/credentials
+                    echo -e "aws_access_key_id=$AWS_ACCESS_KEY_ID" >>  ~/.aws/credentials
+                    echo -e "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >>  ~/.aws/credentials
+                    chmod 400 ~/.aws/credentials
+                    cd 05_terraform/
+                    terraform init
+                    terraform apply -var="ds_script=k3s" -auto-approve
+                '''
+                archiveArtifacts artifacts: '05_terraform/keypair/ds_keypair.pem', onlyIfSuccessful: true
+                stash includes: '05_terraform/keypair/ds_keypair.pem', name: 'terraform-key-k3s'
+            }
+        }
+        stage("Get kubeconfig on k3s Instance") {
+            agent { docker { image 'registry.gitlab.com/robconnolly/docker-ansible:latest' } }
+            steps {
+                unstash 'terraform-key-k3s'
+                sh '''
+                    cd 03_ansible/
+                    ansible-playbook playbooks/k3s/kubeconfig.yaml --private-key ../05_terraform/keypair/ds_keypair.pem
+                '''
+            }
+        }
+        stage("Deploy app on k3s Instance") {
+            agent { 
+                docker { image 'bitnami/kubectl'; args '--entrypoint=""' }
+            }
+            steps {
+                sh '''
+                    host_ip=$(grep 'ansible_host:' 03_ansible/host_vars/dev-1.yaml | awk '{print $2}')
+                    sed -i "s|host_ip|$host_ip|g" 03_kubernetes/icwebapp-manifests/icwebapp-configmaps.yaml
+                    cd 03_kubernetes/
+                    kubectl --kubeconfig=../03_ansible/playbooks/k3s/k3s.yaml apply -k .
+                '''
+            }
+        }
+        stage('Destroy k3s Instance on aws') {
+            steps {
+                input message: "Voulez-vous détruire l'instance k3s?", ok: 'Yes'
+            }
+        }
+        stage("Destroy K3s Instance") {
+            agent { docker { image 'jenkins/jnlp-agent-terraform' } }
+            environment {
+                AWS_ACCESS_KEY_ID = credentials('aws_access_key_id')
+                AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key')
+            }
+            steps {
+                sh '''
+                    mkdir -p ~/.aws
+                    echo "[default]" > ~/.aws/credentials
+                    echo -e "aws_access_key_id=$AWS_ACCESS_KEY_ID" >>  ~/.aws/credentials
+                    echo -e "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >>  ~/.aws/credentials
+                    chmod 400 ~/.aws/credentials
+                    cd 05_terraform/
+                    terraform init
+                    terraform destroy -var="ds_script=k3s" -auto-approve
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            echo "========always========"
+            cleanWs()
+        }
+        success {
+            echo "========pipeline executed successfully ========"
+        }
+        failure {
+            echo "========pipeline execution failed========"
+        }
+    }
+}

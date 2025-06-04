@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: odoo-config
+  namespace: icgroup
+data:
+  HOST: "postgres"
+  USER: "odoo"
+  # Ajoute ici toute config non sensible

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{ include "icgroup.labels" "pgadmin" | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{ include "icgroup.selectorLabels" "pgadmin" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "icgroup.labels" "pgadmin" | nindent 8 }}
+    spec:
+      containers:
+        - name: pgadmin
+          image: {{ .Values.pgadmin.image }}
+          ports:
+            - containerPort: 80
+          env:
+            - name: PGADMIN_DEFAULT_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: pgadmin-config
+                  key: PGADMIN_DEFAULT_EMAIL
+            - name: PGADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pgadmin-secret
+                  key: PGADMIN_DEFAULT_PASSWORD
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: pgadmin-data
+              mountPath: /var/lib/pgadmin
+            - name: pgadmin-servers
+              mountPath: /pgadmin4/servers.json
+              subPath: servers.json
+      volumes:
+        - name: pgadmin-data
+          persistentVolumeClaim:
+            claimName: pgadmin-data-pvc
+        - name: pgadmin-servers
+          configMap:
+            name: pgadmin-servers

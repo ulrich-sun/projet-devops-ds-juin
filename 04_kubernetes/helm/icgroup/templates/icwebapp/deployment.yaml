@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: icwebapp
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{ include "icgroup.labels" "icwebapp" | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{ include "icgroup.selectorLabels" "icwebapp" | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "icgroup.labels" "icwebapp" | nindent 8 }}
+    spec:
+      containers:
+        - name: icwebapp
+          image: {{ .Values.icwebapp.image }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ODOO_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: icwebapp-config
+                  key: ODOO_URL
+            - name: PGADMIN_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: icwebapp-config
+                  key: PGADMIN_URL
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: icwebapp-secret
+                  key: SECRET_KEY
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

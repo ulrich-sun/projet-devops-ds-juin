@@ -1,0 +1,46 @@
+namespace: icgroup
+
+odoo:
+  image: odoo:17.0
+  replicas: 1
+  cpuRequest: 300m
+  cpuLimit: 1
+  memRequest: 512Mi
+  memLimit: 2Gi
+  storage: 5Gi
+  dbHost: postgres
+  dbUser: odoo
+  dbPassword: odoo
+
+postgres:
+  image: postgres:15
+  storage: 10Gi
+  db: postgres
+  user: odoo
+  password: odoo
+
+pgadmin:
+  image: dpage/pgadmin4:latest
+  storage: 2Gi
+  email: admin@icgroup.com
+  password: admin
+  serversJson: |
+    {
+      "Servers": {
+        "1": {
+          "Name": "Postgres",
+          "Group": "Servers",
+          "Host": "postgres",
+          "Port": 5432,
+          "Username": "odoo",
+          "SSLMode": "prefer"
+        }
+      }
+    }
+
+icwebapp:
+  image: ic-webapp:1.0
+  storage: 1Gi
+  odooUrl: http://odoo:8069
+  pgadminUrl: http://pgadmin:80
+  secretKey: your-secret-key
