@@ -1,0 +1,122 @@
+stages:
+  - build
+  - test
+  - push
+  - infra-docker
+  - deploy-docker
+  - destroy_docker
+
+variables:
+  DOCKERFILE_NAME: "Dockerfile"
+  DOCKER_DIR: "./01_docker"
+  IMAGE_NAME: "ic-webapp-2"
+  IMAGE_TAG: "1.0"
+  HOST_PORT: "8080"
+  CONT_PORT: "8080"
+  HOST_IP: "172.17.0.1"
+
+build_image:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build --no-cache -t "$DOCKERHUB_ID/$IMAGE_NAME:$IMAGE_TAG" -f "$DOCKER_DIR/$DOCKERFILE_NAME" "$DOCKER_DIR/."
+    - docker save -o image.tar "$DOCKERHUB_ID/$IMAGE_NAME:$IMAGE_TAG" 
+  artifacts:
+    paths:
+      - image.tar
+    expire_in: 1 hour
+  only:
+    - main
+
+run_and_test:
+  stage: test
+  image: docker:latest
+  services:
+    - name: docker:dind
+      alias: docker
+  # dependencies:
+  #   - build_image
+  script:
+    - apk add --no-cache curl   
+    - docker load -i image.tar
+    - docker rm -f "$IMAGE_NAME" || true
+    - docker run --name "$IMAGE_NAME" -dp $HOST_PORT:$CONT_PORT "$DOCKERHUB_ID/$IMAGE_NAME:$IMAGE_TAG"
+    - sleep 5
+    - curl -I http://docker:$HOST_PORT | grep -i "200"
+  only:
+    - main
+
+push_image:
+  stage: push
+  image: docker:latest
+  services:
+    - docker:dind
+  # dependencies:
+  #   - run_and_test
+  script:
+    - docker load -i image.tar
+    - echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_ID" --password-stdin
+    - docker push "$DOCKERHUB_ID/$IMAGE_NAME:$IMAGE_TAG"
+  only:
+    - main
+
+# Terraform and Ansible stages for Docker instance creation and deployment
+
+create_docker_instance:
+  stage: infra-docker
+  image:
+    name: hashicorp/terraform
+    entrypoint: [""]
+  script:
+    - mkdir -p ~/.aws
+    - echo "[default]" > ~/.aws/credentials
+    - echo "aws_access_key_id=$AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+    - echo "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+    - chmod 400 ~/.aws/credentials
+    - cd 05_terraform/
+    - terraform init
+    - terraform apply -var="ds_script=docker" -auto-approve
+    - cd ..
+    - cat 03_ansible/host_vars/machine-1.yaml
+    - ls -l 05_terraform/keypair/
+  artifacts:
+    paths:
+      - 03_ansible/host_vars/machine-1.yaml
+      - 05_terraform/keypair/ds_keypair.pem
+    expire_in: 1 hour
+  only:
+    - main
+
+deploy_app_on_docker_instance:
+  stage: deploy-docker
+  image: registry.gitlab.com/robconnolly/docker-ansible:latest
+  dependencies:
+    - create_docker_instance
+  script:
+    - chmod -R 777 03_ansible
+    - cat 03_ansible/host_vars/machine-1.yaml
+    - ls -l 05_terraform/keypair/
+    - cd 03_ansible/
+    - export ANSIBLE_CONFIG=ansible.cfg
+    - ansible-playbook playbooks/docker/projet-ds.yaml  -i inventaire.yaml --private-key ../05_terraform/keypair/ds_keypair.pem --skip-tags delete
+  only:
+    - main
+
+destroy_docker_instance:
+  stage: destroy_docker
+  image:
+    name: hashicorp/terraform
+    entrypoint: [""]
+  script:
+    - mkdir -p ~/.aws
+    - echo "[default]" > ~/.aws/credentials
+    - echo "aws_access_key_id=$AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+    - echo "aws_secret_access_key=$AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+    - chmod 400 ~/.aws/credentials
+    - cd 05_terraform/
+    - terraform init
+    - terraform destroy -var="ds_script=docker" -auto-approve
+  only:
+    - main

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo-deployment
+  labels:
+    app: odoo
+    env: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odoo
+      env: prod
+  template:
+    metadata:
+      labels:
+        app: odoo
+        env: prod
+    spec:
+      containers:
+      - name: odoo
+        image: odoo:17.0
+        ports:
+        - containerPort: 8069
+        envFrom:
+        - secretRef:
+            name: odoo-secret
+        - configMapRef:
+            name: odoo-cm
+        # env:
+        # - name: HOST
+        #   value: postgresql-service
+        # - name: USER
+        #   value: odoo
+        # - name: PASSWORD
+        #   value: odoo
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/odoo
+        - name: config
+          mountPath: /etc/odoo
+        - name: addons
+          mountPath: /mnt/extra-addons
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: odoo-pvc
+      - name: config
+        hostPath:
+          # type: DirectoryOrCreate
+          path: /data-odoo/config
+      - name: addons
+        hostPath:
+          # type: DirectoryOrCreate
+          path: /data-odoo/addons
