@@ -72,7 +72,7 @@ pipeline{
                 script {
                     sh '''
                         cd 03_ansible/
-                        ansible-playbook playbooks/docker/learn.yaml --private-key ../05_terraform/keypair/ds_keypair.pem
+                        ansible-playbook playbooks/docker/projet-ds.yaml --private-key ../05_terraform/keypair/ds_keypair.pem
                     '''
                 }
             }

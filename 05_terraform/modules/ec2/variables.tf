@@ -15,5 +15,4 @@ variable "ds_sg_name" {
 variable "ds_az" {
 }
 variable "ds_script" {
-  
 }
